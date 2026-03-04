@@ -4,6 +4,7 @@
 package config
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -117,7 +118,8 @@ func TestSimulatorValidator_Empty(t *testing.T) {
 
 func TestSimulatorValidator_AbsolutePath(t *testing.T) {
 	v := SimulatorValidator{}
-	cfg := &Config{SimulatorPath: "/usr/local/bin/soroban-sim"}
+	absPath, _ := filepath.Abs("soroban-sim")
+	cfg := &Config{SimulatorPath: absPath}
 	if err := v.Validate(cfg); err != nil {
 		t.Errorf("absolute path should be valid: %v", err)
 	}

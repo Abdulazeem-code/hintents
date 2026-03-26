@@ -88,13 +88,12 @@ func DecodeEvents(eventsXdr []string, maxDepth int) (*CallNode, error) {
 			// Add the call event itself to the child (optional, but good for context)
 			current.Events = append(current.Events, decoded)
 		} else if isFunctionReturn(decoded) {
-			returnedFn := extractFunctionName(decoded)
+			if maxDepth > 0 && currentDepth >= maxDepth {
+				// We skipped the corresponding call, so we must skip the return.
+				continue
+			}
 
-			// If we are at max depth and receive a return for a function we skipped,
-			// we just ignore it. But how do we know we skipped it?
-			// The current.Function will not match if we are deeper than maxDepth
-			// and we kept track of where we should be.
-			// Actually, if we just skipped 'fn_call' at maxDepth, we should also skip 'fn_return'.
+			returnedFn := extractFunctionName(decoded)
 
 			// Handle stack unwinding for failed/implicit returns
 			// If current function doesn't match the return event, check up the stack

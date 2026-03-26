@@ -152,7 +152,6 @@ func (c *Config) Validate() error {
 		SimulatorValidator{},
 		LogLevelValidator{},
 		TimeoutValidator{},
-		MaxTraceDepthValidator{},
 		CrashReportingValidator{},
 	}
 	for _, v := range validators {
@@ -182,7 +181,7 @@ func (c *Config) NetworkURL() string {
 
 func GetGeneralConfigPath() (string, error) {
 	// Assumes GetConfigPath is defined in your networks.go
-	configDir, err := os.UserConfigDir() 
+	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
@@ -278,18 +277,22 @@ type fileParser struct{}
 
 func (fileParser) Parse(cfg *Config) error {
 	// Implementation usually calls loadTOML defined in parse.go
-	return nil 
+	return nil
 }
 
 // -- Validators --
 
 type RPCValidator struct{}
+
 func (RPCValidator) Validate(cfg *Config) error {
-	if cfg.RpcUrl == "" { return errors.WrapValidationError("rpc_url cannot be empty") }
+	if cfg.RpcUrl == "" {
+		return errors.WrapValidationError("rpc_url cannot be empty")
+	}
 	return nil
 }
 
 type NetworkValidator struct{}
+
 func (NetworkValidator) Validate(cfg *Config) error {
 	if cfg.Network != "" && !validNetworks[string(cfg.Network)] {
 		return errors.WrapInvalidNetwork(string(cfg.Network))
@@ -298,31 +301,37 @@ func (NetworkValidator) Validate(cfg *Config) error {
 }
 
 type SimulatorValidator struct{}
+
 func (SimulatorValidator) Validate(cfg *Config) error { return nil }
 
 type LogLevelValidator struct{}
+
 func (LogLevelValidator) Validate(cfg *Config) error { return nil }
 
 type TimeoutValidator struct{}
+
 func (TimeoutValidator) Validate(cfg *Config) error { return nil }
 
-type MaxTraceDepthValidator struct{}
-func (MaxTraceDepthValidator) Validate(cfg *Config) error {
-	if cfg.MaxTraceDepth < 1 {
-		return errors.WrapValidationError("max_trace_depth must be at least 1")
-	}
-	return nil
-}
-
 type CrashReportingValidator struct{}
+
 func (CrashReportingValidator) Validate(cfg *Config) error { return nil }
 
 type configDefaultsAssigner struct{}
 
 func (configDefaultsAssigner) Apply(cfg *Config) {
-	if cfg.RpcUrl == "" { cfg.RpcUrl = defaultConfig.RpcUrl }
-	if cfg.Network == "" { cfg.Network = defaultConfig.Network }
-	if cfg.LogLevel == "" { cfg.LogLevel = defaultConfig.LogLevel }
-	if cfg.RequestTimeout == 0 { cfg.RequestTimeout = defaultRequestTimeout }
-	if cfg.MaxTraceDepth == 0 { cfg.MaxTraceDepth = 50 }
+	if cfg.RpcUrl == "" {
+		cfg.RpcUrl = defaultConfig.RpcUrl
+	}
+	if cfg.Network == "" {
+		cfg.Network = defaultConfig.Network
+	}
+	if cfg.LogLevel == "" {
+		cfg.LogLevel = defaultConfig.LogLevel
+	}
+	if cfg.RequestTimeout == 0 {
+		cfg.RequestTimeout = defaultRequestTimeout
+	}
+	if cfg.MaxTraceDepth == 0 {
+		cfg.MaxTraceDepth = 50
+	}
 }

@@ -5,6 +5,7 @@ package decoder
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -110,6 +111,55 @@ func TestMaxDepth(t *testing.T) {
 	// A warning is added to A's Events.
 	require.Len(t, nodeA.SubCalls, 0)
 	assert.Contains(t, nodeA.Events[1].Data, "Max trace depth reached")
+}
+
+func TestDeepRecursionSafety(t *testing.T) {
+	// Simulate 100 levels of nesting
+	const totalNesting = 100
+	const maxDepth = 50
+	var events []string
+
+	// Create 100 nested calls
+	for i := 1; i <= totalNesting; i++ {
+		fnName := fmt.Sprintf("Fn%d", i)
+		events = append(events, createEvent(t, fnName, true, false))
+	}
+
+	// Create 100 returns
+	for i := totalNesting; i >= 1; i-- {
+		fnName := fmt.Sprintf("Fn%d", i)
+		events = append(events, createEvent(t, fnName, false, true))
+	}
+
+	root, err := DecodeEvents(events, maxDepth)
+	require.NoError(t, err)
+
+	// Traverse to verify depth
+	current := root
+	depth := 0
+	for len(current.SubCalls) > 0 {
+		current = current.SubCalls[0]
+		depth++
+	}
+
+	// Should be exactly maxDepth deep
+	assert.Equal(t, maxDepth, depth, "Trace should be truncated at maxDepth")
+
+	// The node at maxDepth should have the warning event
+	hasWarning := false
+	for _, e := range current.Events {
+		if e.Topics[0] == "warning" && strings.Contains(e.Data, "Max trace depth reached") {
+			hasWarning = true
+			break
+		}
+	}
+	assert.True(t, hasWarning, "Warning should be present at truncation point")
+
+	// Ensure we returned to ROOT correctly (stack didn't get corrupted)
+	// After all returns are processed, current should have unwound back to root
+	// But our DecodeEvents doesn't return the 'current' state.
+	// We can check if root has only one child branch as expected.
+	assert.Len(t, root.SubCalls, 1)
 }
 
 func TestUnbalanced(t *testing.T) {

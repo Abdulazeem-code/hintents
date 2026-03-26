@@ -287,7 +287,7 @@ fn categorize_events(
                 soroban_env_host::xdr::ContractEventType::Diagnostic => "Diagnostic",
             }
             .to_string();
- 
+
             let contract_id = e.event.contract_id.as_ref().map(|id| format!("{id:?}"));
             let (topics, data) = match &e.event.body {
                 soroban_env_host::xdr::ContractEventBody::V0(v0) => {
@@ -300,7 +300,7 @@ fn categorize_events(
                     (topics, data)
                 }
             };
- 
+
             let wasm_instruction = extract_wasm_instruction(&topics, &data);
             CategorizedEvent {
                 category,

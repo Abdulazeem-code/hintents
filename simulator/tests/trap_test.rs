@@ -25,7 +25,10 @@ impl SnapshotRegistry {
     }
 }
 
-fn execute_with_forced_trap(total_steps: usize, trap_at: usize) -> (SnapshotRegistry, SnapshotFrame, String) {
+fn execute_with_forced_trap(
+    total_steps: usize,
+    trap_at: usize,
+) -> (SnapshotRegistry, SnapshotFrame, String) {
     assert!(trap_at > 0, "trap_at must be greater than 0");
     assert!(trap_at < total_steps, "trap_at must be inside total steps");
 
@@ -54,10 +57,9 @@ fn final_snapshot_is_preserved_before_trap() {
     assert_eq!(final_snapshot.label, "Final");
     assert!(err.contains(&final_snapshot.snapshot_id));
 
-    let persisted = registry
-        .frames
-        .iter()
-        .any(|frame| frame.snapshot_id == final_snapshot.snapshot_id && frame.step == final_snapshot.step);
+    let persisted = registry.frames.iter().any(|frame| {
+        frame.snapshot_id == final_snapshot.snapshot_id && frame.step == final_snapshot.step
+    });
     assert!(persisted, "registry dropped the final snapshot");
 }
 
@@ -75,5 +77,8 @@ fn error_message_links_to_snapshot_id() {
 fn panic_fixture_contract_contains_trap_marker() {
     let src = include_str!("../../tests/fixtures/contracts/panic.rust");
     assert!(src.contains("panic!"), "fixture must intentionally panic");
-    assert!(src.contains("panic_with_snapshot"), "fixture should expose panic entrypoint");
+    assert!(
+        src.contains("panic_with_snapshot"),
+        "fixture should expose panic entrypoint"
+    );
 }

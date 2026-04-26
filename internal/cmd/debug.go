@@ -897,8 +897,8 @@ func runLocalWasmReplay() error {
 
 func newLocalWasmSimulationRequest(forceNoCache bool) *simulator.SimulationRequest {
 	req := &simulator.SimulationRequest{
-		EnvelopeXdr:     "", // Empty for local replay
-		ResultMetaXdr:   "", // Empty for local replay
+		EnvelopeXdr:     "",  // Empty for local replay
+		ResultMetaXdr:   "",  // Empty for local replay
 		LedgerEntries:   nil, // Mock state will be generated
 		WasmPath:        &wasmPath,
 		NoCache:         noCacheFlag || forceNoCache,
@@ -1635,4 +1635,3 @@ func displaySourceLocation(loc *simulator.SourceLocation) {
 	}
 	fmt.Println()
 }
-

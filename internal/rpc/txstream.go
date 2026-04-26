@@ -128,18 +128,16 @@ func (s *autoFallbackStreamer) Stream(ctx context.Context, hash string) (<-chan 
 	go func() {
 		defer close(out)
 
-		sawFinal := false
 		for status := range wsCh {
 			if !forwardTxStatus(ctx, out, status) {
 				return
 			}
 			if status.IsFinal() {
-				sawFinal = true
 				return
 			}
 		}
 
-		if sawFinal || ctx.Err() != nil {
+		if ctx.Err() != nil {
 			return
 		}
 
@@ -429,7 +427,7 @@ type wsConn struct {
 func (c *wsConn) close() {
 	// Send a close frame before closing the underlying connection.
 	c.raw.SetWriteDeadline(time.Now().Add(1 * time.Second)) //nolint:errcheck
-	_ = wsWriteFrame(c.raw, nil) // best-effort
+	_ = wsWriteFrame(c.raw, nil)                            // best-effort
 	c.raw.Close()
 }
 

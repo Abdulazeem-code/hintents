@@ -72,3 +72,13 @@ commit_309*.next
 !tsconfig*.json
 
 .gocache
+
+ishus.py
+
+ishus-t.py
+
+ishust.py
+
+create_phase9.py
+
+create_phase10.py

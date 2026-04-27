@@ -24,53 +24,6 @@ import (
 
 var Version = "dev"
 
-// Network types for Stellar
-type Network string
-
-const (
-	Testnet   Network = "testnet"
-	Mainnet   Network = "mainnet"
-	Futurenet Network = "futurenet"
-)
-
-// Horizon URLs for each network
-const (
-	TestnetHorizonURL   = "https://horizon-testnet.stellar.org/"
-	MainnetHorizonURL   = "https://horizon.stellar.org/"
-	FuturenetHorizonURL = "https://horizon-futurenet.stellar.org/"
-)
-
-// Soroban RPC URLs
-const (
-	TestnetSorobanURL   = "https://soroban-testnet.stellar.org"
-	MainnetSorobanURL   = "https://mainnet.stellar.validationcloud.io/v1/soroban-rpc-demo" // Public demo endpoint
-	FuturenetSorobanURL = "https://rpc-futurenet.stellar.org"
-)
-
-// authTransport is a custom HTTP RoundTripper that adds authentication headers
-type authTransport struct {
-	token     string
-	transport http.RoundTripper
-}
-
-// HTTPClient is an interface that matches horizonclient.HTTP.
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
-	Get(url string) (*http.Response, error)
-	Post(url, contentType string, body io.Reader) (*http.Response, error)
-	PostForm(url string, data url.Values) (*http.Response, error)
-}
-
-// RoundTrip implements http.RoundTripper interface
-func (t *authTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if t.token != "" {
-		clone := req.Clone(req.Context())
-		clone.Header.Set("Authorization", "Bearer "+t.token)
-		return t.transport.RoundTrip(clone)
-	}
-	return t.transport.RoundTrip(req)
-}
-
 type uaTransport struct {
 	transport http.RoundTripper
 }
@@ -81,163 +34,33 @@ func (t *uaTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return t.transport.RoundTrip(clone)
 }
 
-// NetworkConfig represents a Stellar network configuration
-type NetworkConfig struct {
-	Name              string
-	HorizonURL        string
-	NetworkPassphrase string
-	SorobanRPCURL     string
+// HTTPClient is an interface that matches horizonclient.HTTP.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+	Get(url string) (*http.Response, error)
+	Post(url, contentType string, body io.Reader) (*http.Response, error)
+	PostForm(url string, data url.Values) (*http.Response, error)
 }
-
-// Predefined network configurations
-var (
-	TestnetConfig = NetworkConfig{
-		Name:              "testnet",
-		HorizonURL:        TestnetHorizonURL,
-		NetworkPassphrase: "Test SDF Network ; September 2015",
-		SorobanRPCURL:     TestnetSorobanURL,
-	}
-
-	MainnetConfig = NetworkConfig{
-		Name:              "mainnet",
-		HorizonURL:        MainnetHorizonURL,
-		NetworkPassphrase: "Public Global Stellar Network ; September 2015",
-		SorobanRPCURL:     MainnetSorobanURL,
-	}
-
-	FuturenetConfig = NetworkConfig{
-		Name:              "futurenet",
-		HorizonURL:        FuturenetHorizonURL,
-		NetworkPassphrase: "Test SDF Future Network ; October 2022",
-		SorobanRPCURL:     FuturenetSorobanURL,
-	}
-)
 
 // Client handles interactions with the Stellar Network
 type Client struct {
-	Horizon      horizonclient.ClientInterface
-	HorizonURL   string
-	Network      Network
-	SorobanURL   string
-	AltURLs      []string
-	currIndex    int
-	mu           sync.RWMutex
-	token        string // stored for reference, not logged
-	Config       NetworkConfig
-	CacheEnabled bool
-}
-
-// NewClientDefault creates a new RPC client with sensible defaults
-// Uses the Mainnet by default and accepts optional environment token
-// Deprecated: Use NewClient with functional options instead
-func NewClientDefault(net Network, token string) *Client {
-	client, err := NewClient(WithNetwork(net), WithToken(token))
-	if err != nil {
-		logger.Logger.Error("Failed to create client with default options", "error", err)
-		return nil
-	}
-	return client
-}
-
-// NewClientWithURLOption creates a new RPC client with a custom Horizon URL
-// Deprecated: Use NewClient with WithHorizonURL instead
-func NewClientWithURLOption(url string, net Network, token string) *Client {
-	client, err := NewClient(WithNetwork(net), WithToken(token), WithHorizonURL(url))
-	if err != nil {
-		logger.Logger.Error("Failed to create client with URL", "error", err)
-		return nil
-	}
-	return client
-}
-
-// NewClientWithURLsOption creates a new RPC client with multiple Horizon URLs for failover
-// Deprecated: Use NewClient with WithAltURLs instead
-func NewClientWithURLsOption(urls []string, net Network, token string) *Client {
-	client, err := NewClient(WithNetwork(net), WithToken(token), WithAltURLs(urls))
-	if err != nil {
-		logger.Logger.Error("Failed to create client with URLs", "error", err)
-		return nil
-	}
-	return client
-}
-
-// rotateURL switches to the next available provider URL
-func (c *Client) rotateURL() bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if len(c.AltURLs) <= 1 {
-		return false
-	}
-
-	c.currIndex = (c.currIndex + 1) % len(c.AltURLs)
-	c.HorizonURL = c.AltURLs[c.currIndex]
-	c.Horizon = &horizonclient.Client{
-		HorizonURL: c.HorizonURL,
-		HTTP:       createHTTPClient(c.token),
-	}
-
-	logger.Logger.Warn("RPC failover triggered", "new_url", c.HorizonURL)
-	return true
-}
-
-// createHTTPClient creates an HTTP client with optional authentication
-func createHTTPClient(token string) *http.Client {
-	cfg := DefaultRetryConfig()
-
-	var baseTransport http.RoundTripper = http.DefaultTransport
-
-	var transport http.RoundTripper = baseTransport
-
-	// Add user-agent transport
-	transport = &uaTransport{transport: transport}
-
-	if token != "" {
-		transport = &authTransport{
-			token:     token,
-			transport: transport,
-		}
-	}
-
-	transport = NewRetryTransport(cfg, transport)
-
-	return &http.Client{
-		Transport: transport,
-	}
-}
-
-// NewCustomClient creates a new RPC client for a custom/private network
-// Deprecated: Use NewClient with WithNetworkConfig instead
-func NewCustomClient(config NetworkConfig) (*Client, error) {
-	if err := ValidateNetworkConfig(config); err != nil {
-		return nil, err
-	}
-
-	horizonClient := &horizonclient.Client{
-		HorizonURL: config.HorizonURL,
-		HTTP:       http.DefaultClient,
-	}
-
-	sorobanURL := config.SorobanRPCURL
-	if sorobanURL == "" {
-		sorobanURL = config.HorizonURL
-	}
-
-	return &Client{
-		Horizon:      horizonClient,
-		Network:      "custom",
-		SorobanURL:   sorobanURL,
-		Config:       config,
-		CacheEnabled: true,
-	}, nil
-}
-
-// attempts returns the number of retry attempts for failover loops (at least 1)
-func (c *Client) attempts() int { //nolint:unused
-	if len(c.AltURLs) == 0 {
-		return 1
-	}
-	return len(c.AltURLs)
+	Horizon         horizonclient.ClientInterface
+	HorizonURL      string
+	Network         Network
+	SorobanURL      string
+	AltURLs         []string
+	currIndex       int
+	mu              sync.RWMutex
+	token           string // stored for reference, not logged
+	Config          NetworkConfig
+	CacheEnabled    bool
+	httpClient      HTTPClient
+	methodTelemetry MethodTelemetry
+	failures        map[string]int
+	lastFailure     map[string]time.Time
+	middlewares     []Middleware
+	healthCollector *HealthCollector
+	rotateCount     int
 }
 
 func (c *Client) startMethodTimer(ctx context.Context, method string, attributes map[string]string) MethodTimer {

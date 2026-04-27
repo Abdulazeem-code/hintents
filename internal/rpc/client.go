@@ -24,16 +24,6 @@ import (
 
 var Version = "dev"
 
-type uaTransport struct {
-	transport http.RoundTripper
-}
-
-func (t *uaTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	clone := req.Clone(req.Context())
-	clone.Header.Set("User-Agent", "ERST-SDK/"+Version)
-	return t.transport.RoundTrip(clone)
-}
-
 // HTTPClient is an interface that matches horizonclient.HTTP.
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -44,23 +34,6 @@ type HTTPClient interface {
 
 // Client handles interactions with the Stellar Network
 type Client struct {
-<<<<<<< fix/multiple-issues
-	Horizon         horizonclient.ClientInterface
-	HorizonURL      string
-	Network         Network
-	SorobanURL      string
-	AltURLs         []string
-	currIndex       int
-	mu              sync.RWMutex
-	token           string // stored for reference, not logged
-	Config          NetworkConfig
-	CacheEnabled    bool
-	httpClient      HTTPClient
-	methodTelemetry MethodTelemetry
-	failures        map[string]int
-	lastFailure     map[string]time.Time
-	middlewares     []Middleware
-=======
 	Horizon          horizonclient.ClientInterface
 	HorizonURL       string
 	Network          Network
@@ -82,9 +55,7 @@ type Client struct {
 	// the active provider.  This is useful for metrics/observability when the
 	// client is operating in a multi‑URL failover configuration.
 	rotateCount     int
->>>>>>> main
 	healthCollector *HealthCollector
-	rotateCount     int
 }
 
 func (c *Client) startMethodTimer(ctx context.Context, method string, attributes map[string]string) MethodTimer {

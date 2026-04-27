@@ -115,12 +115,12 @@ type CustomContractAuth struct {
 
 // SACCall holds metadata for a Stellar Asset Contract interaction (#1210).
 type SACCall struct {
-	ContractID  string   `json:"contract_id"`
-	AssetLabel  string   `json:"asset_label"` // e.g. "XLM (Native)" or "USDC (Circle)"
-	Method      string   `json:"method"`
-	Params      []string `json:"params,omitempty"`
-	Result      string   `json:"result"`
-	ErrorMsg    string   `json:"error_msg,omitempty"`
+	ContractID string   `json:"contract_id"`
+	AssetLabel string   `json:"asset_label"` // e.g. "XLM (Native)" or "USDC (Circle)"
+	Method     string   `json:"method"`
+	Params     []string `json:"params,omitempty"`
+	Result     string   `json:"result"`
+	ErrorMsg   string   `json:"error_msg,omitempty"`
 }
 
 // ReplayAttackWarning is returned by CheckReplayAttack when a vulnerability is
